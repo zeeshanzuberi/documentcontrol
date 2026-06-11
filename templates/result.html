@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>Export Complete</h1>
+  <div class="counts">
+    <div class="count"><strong>{{ report.counts.chapter_heading }}</strong><span>Chapter headings</span></div>
+    <div class="count"><strong>{{ report.counts.tables }}</strong><span>Tables detected</span></div>
+    <div class="count"><strong>{{ report.counts.images }}</strong><span>Images detected</span></div>
+    <div class="count"><strong>{{ report.skipped_front_matter.items }}</strong><span>Skipped items</span></div>
+  </div>
+  {% if report.warnings %}
+    <div class="notice">
+      {% for warning in report.warnings[:6] %}
+        <div>{{ warning }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% if report.errors %}
+    <div class="notice error">
+      {% for error in report.errors %}
+        <div>{{ error }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  <h2 style="margin-top:16px;">Generated Section Status</h2>
+  <table>
+    <tbody>
+      {% for key, value in report.generated.items() %}
+      <tr><th>{{ key }}</th><td>{{ value }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <h2 style="margin-top:16px;">Review Checklist</h2>
+  <table>
+    <tbody>
+      {% for row in report.quality_control %}
+      <tr><th>{{ row.status }}</th><td>{{ row.item }}{% if row.detail %}<br><span class="muted">{{ row.detail }}</span>{% endif %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="actions">
+    {% for download in downloads %}
+      <a class="button{% if not download.name.endswith('.docx') %} secondary{% endif %}" href="{{ download.url }}">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"></path><path d="M5 21h14"></path></svg>
+        {{ download.name }}
+      </a>
+    {% endfor %}
+  </div>
+</section>
+<section class="panel" style="margin-top:16px;">
+  <h2>Final Word Update</h2>
+  <ol>
+    <li>Open the converted manual in Microsoft Word.</li>
+    <li>Press Ctrl+A.</li>
+    <li>Press F9 to update all fields.</li>
+    <li>Right-click the Table of Contents and select Update Field.</li>
+    <li>Select Update entire table.</li>
+    <li>Check page numbers in the header/footer.</li>
+    <li>Check LEP after pagination is updated.</li>
+    <li>Review all generated front matter before controlled release.</li>
+  </ol>
+</section>
+{% endblock %}

@@ -1,0 +1,25 @@
+{
+  "remove_template_examples": true,
+  "approval": {
+    "enabled": true,
+    "fields": [
+      ["Manual Name", "manual_name"],
+      ["Manual Abbreviation", "manual_abbreviation"],
+      ["Edition Number", "edition_number"],
+      ["Revision Number", "revision_number"],
+      ["Effective Date", "effective_date"],
+      ["Issue Date", "issue_date"],
+      ["Department / Owner", "document_owner"],
+      ["Prepared By", "prepared_by"],
+      ["Checked By", "checked_by"],
+      ["Approved By", "approved_by"]
+    ]
+  },
+  "sample_value_patterns": [
+    "Edition 07",
+    "18-04-2026",
+    "17-04-26",
+    "Mr. Waseem Javed",
+    "Ms. Marium Arif"
+  ]
+}

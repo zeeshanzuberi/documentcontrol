@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>Conversion Stopped</h1>
+  <div class="notice error">{{ message }}</div>
+  <div class="actions">
+    <a class="button secondary" href="/">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>
+      Back
+    </a>
+  </div>
+</section>
+{% endblock %}

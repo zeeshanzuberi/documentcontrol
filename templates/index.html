@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block content %}
+<form action="/preview" method="post" enctype="multipart/form-data">
+  <div class="grid">
+    <section class="panel">
+      <h1>Manual Conversion</h1>
+      <div class="field">
+        <label for="template_file">Official Airblue template (.docx)</label>
+        <input id="template_file" name="template_file" type="file" accept=".docx" required>
+      </div>
+      <div class="field">
+        <label for="source_file">Old manual (.docx or .pdf)</label>
+        <input id="source_file" name="source_file" type="file" accept=".docx,.pdf" required>
+      </div>
+      <div class="field">
+        <label for="body_insertion_bookmark">Body insertion bookmark</label>
+        <input id="body_insertion_bookmark" name="body_insertion_bookmark" type="text" value="Chapter_0" list="bookmark_options" autocomplete="off">
+        <datalist id="bookmark_options">
+          <option value="BODY_CONTENT"></option>
+          <option value="CONTENT_START"></option>
+          <option value="Chapter_0"></option>
+          <option value="MAIN_CONTENT"></option>
+          <option value="ManualBody"></option>
+        </datalist>
+      </div>
+      <div class="field">
+        <label for="numbering_mode">Numbering mode</label>
+        <select id="numbering_mode" name="numbering_mode">
+          <option value="word_fields" selected>Word field based</option>
+          <option value="static">Static fallback with warning</option>
+        </select>
+      </div>
+      <label class="checkline">
+        <input type="checkbox" name="revision_bars" value="1">
+        Enable revision bars
+      </label>
+    </section>
+
+    <section class="panel">
+      <h2>Manual Metadata</h2>
+      <div class="field">
+        <label for="manual_name">Manual Name</label>
+        <input id="manual_name" name="manual_name" type="text" autocomplete="off">
+      </div>
+      <div class="fields-two">
+        <div class="field">
+          <label for="manual_abbreviation">Manual Abbreviation</label>
+          <input id="manual_abbreviation" name="manual_abbreviation" type="text" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="document_owner">Department / Owner</label>
+          <input id="document_owner" name="document_owner" type="text" autocomplete="off">
+        </div>
+      </div>
+      <div class="fields-two">
+        <div class="field">
+          <label for="edition_number">Edition Number</label>
+          <input id="edition_number" name="edition_number" type="text" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="revision_number">Revision Number</label>
+          <input id="revision_number" name="revision_number" type="text" autocomplete="off">
+        </div>
+      </div>
+      <div class="fields-two">
+        <div class="field">
+          <label for="effective_date">Effective Date</label>
+          <input id="effective_date" name="effective_date" type="text" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="issue_date">Issue Date</label>
+          <input id="issue_date" name="issue_date" type="text" autocomplete="off">
+        </div>
+      </div>
+      <div class="fields-two">
+        <div class="field">
+          <label for="prepared_by">Prepared By</label>
+          <input id="prepared_by" name="prepared_by" type="text" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="checked_by">Checked By</label>
+          <input id="checked_by" name="checked_by" type="text" autocomplete="off">
+        </div>
+      </div>
+      <div class="field">
+        <label for="approved_by">Approved By</label>
+        <input id="approved_by" name="approved_by" type="text" autocomplete="off">
+      </div>
+    </section>
+  </div>
+  <section class="panel" style="margin-top:16px;">
+    <h2>Conversion Options</h2>
+    <div class="fields-two">
+      <label class="checkline"><input type="checkbox" name="generate_lep" value="1" checked> Generate LEP</label>
+      <label class="checkline"><input type="checkbox" name="generate_ror" value="1" checked> Generate ROR</label>
+      <label class="checkline"><input type="checkbox" name="generate_roa" value="1" checked> Generate ROA</label>
+      <label class="checkline"><input type="checkbox" name="extract_definitions" value="1" checked> Extract definitions</label>
+      <label class="checkline"><input type="checkbox" name="extract_abbreviations" value="1" checked> Extract abbreviations</label>
+      <label class="checkline"><input type="checkbox" name="extract_conformance" value="1" checked> Extract conformance tables</label>
+      <label class="checkline"><input type="checkbox" name="preserve_blank_pages" value="1" checked> Preserve blank pages</label>
+      <label class="checkline"><input type="checkbox" name="extract_images" value="1" checked> Preserve body images</label>
+      <label class="checkline"><input type="checkbox" name="extract_tables" value="1" checked> Preserve body tables</label>
+    </div>
+  </section>
+  <div class="actions">
+    <button type="submit">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+      Preview Mapping
+    </button>
+  </div>
+</form>
+{% endblock %}

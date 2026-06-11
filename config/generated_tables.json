@@ -1,0 +1,23 @@
+{
+  "lep": {
+    "enabled": true,
+    "source": "final_document_structure",
+    "columns": ["Section", "Page", "Edition", "Revision", "Effective Date", "Remarks"],
+    "review_remark": "Review after fields and pagination are updated in Microsoft Word."
+  },
+  "ror": {
+    "enabled": true,
+    "columns": ["Revision", "Date", "Description", "Inserted By", "Approved By"],
+    "default_description": "Converted to new Airblue manual template format."
+  },
+  "roa": {
+    "enabled": true,
+    "columns": ["Amendment", "Date", "Affected Pages", "Inserted By"],
+    "default_affected_pages": "Generated manual; review LEP after Word pagination update."
+  },
+  "conformance_tables": {
+    "enabled": true,
+    "detect_from_source": true,
+    "preserve_source_content": true
+  }
+}

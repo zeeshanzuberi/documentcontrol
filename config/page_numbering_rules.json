@@ -1,0 +1,11 @@
+{
+  "front_matter_numbering": "0-{page}",
+  "chapter_numbering": "{chapter}-{page}",
+  "appendix_numbering": "{appendix}-{page}",
+  "restart_each_chapter": true,
+  "restart_each_appendix": true,
+  "use_word_fields": true,
+  "fallback_static_warning": true,
+  "header_metadata_format": "E-{edition} R-{revision} {prefix}-",
+  "front_matter_prefix": "0"
+}

@@ -1,0 +1,47 @@
+{
+  "max_heading_characters": 140,
+  "max_heading_words": 18,
+  "heading_sentence_endings": [".", ";"],
+  "body_start_headings": [
+    "definitions",
+    "abbreviations",
+    "references",
+    "chapter",
+    "appendix",
+    "annex",
+    "section"
+  ],
+  "front_matter_keywords": [
+    "title page",
+    "approval page",
+    "manual identification number",
+    "master index",
+    "table of contents",
+    "contents",
+    "list of effective pages",
+    "record of revisions",
+    "record of amendments",
+    "revision record",
+    "edition record",
+    "distribution list",
+    "controlled copy",
+    "page no",
+    "para description page no"
+  ],
+  "patterns": {
+    "chapter": "^(chapter|Chapter|CHAPTER)\\s+[0-9A-Za-z]+\\b",
+    "chapter_dash": "^Chapter\\s*[–-]\\s*[0-9A-Za-z]+\\s*:",
+    "appendix": "^(appendix|Appendix|APPENDIX|annex|Annex|ANNEX)\\s+[A-Z0-9]+\\b",
+    "section": "^(section|SECTION)\\s+[0-9A-Za-z]+\\b",
+    "numeric_heading": "^(?P<marker>\\d+(?:\\.\\d+){0,5})\\s+(?P<body>\\S.*)$",
+    "numeric_list": "^(?P<marker>\\d+)[\\.)]\\s+(?P<body>\\S.*)$",
+    "upper_alpha_list": "^(?P<marker>[A-Z])\\.\\s+(?P<body>\\S.*)$",
+    "lower_alpha_list": "^(?P<marker>[a-z])\\.\\s+(?P<body>\\S.*)$",
+    "lower_alpha_paren": "^(?P<marker>[a-z])\\)\\s+(?P<body>\\S.*)$",
+    "roman_list": "^(?P<marker>i{1,3}|iv|v|vi{0,3}|ix|x)\\.\\s+(?P<body>\\S.*)$",
+    "bullet": "^([•\\-*])\\s+(?P<body>\\S.*)$",
+    "note": "^(note|NOTE)\\s*:",
+    "caution": "^(caution|CAUTION)\\s*:",
+    "warning": "^(warning|WARNING)\\s*:"
+  }
+}

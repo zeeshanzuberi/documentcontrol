@@ -1,0 +1,80 @@
+{
+  "placeholders": {
+    "{{MANUAL_NAME}}": "manual_name",
+    "{{MANUAL_ABBREVIATION}}": "manual_abbreviation",
+    "{{EDITION_NUMBER}}": "edition_number",
+    "{{REVISION_NUMBER}}": "revision_number",
+    "{{EFFECTIVE_DATE}}": "effective_date",
+    "{{ISSUE_DATE}}": "issue_date",
+    "{{DOCUMENT_OWNER}}": "document_owner",
+    "{{DEPARTMENT}}": "document_owner",
+    "{{PREPARED_BY}}": "prepared_by",
+    "{{CHECKED_BY}}": "checked_by",
+    "{{APPROVED_BY}}": "approved_by"
+    ,
+    "{{BODY_CONTENT}}": "_body_content"
+  },
+  "bookmarks": {
+    "MANUAL_NAME": "manual_name",
+    "MANUAL_ABBREVIATION": "manual_abbreviation",
+    "EDITION_NUMBER": "edition_number",
+    "REVISION_NUMBER": "revision_number",
+    "EFFECTIVE_DATE": "effective_date",
+    "ISSUE_DATE": "issue_date",
+    "DOCUMENT_OWNER": "document_owner",
+    "PREPARED_BY": "prepared_by",
+    "CHECKED_BY": "checked_by",
+    "APPROVED_BY": "approved_by"
+  },
+  "front_matter_patterns": [
+    {
+      "literal": "Flight Dispatch Manual",
+      "field": "manual_name",
+      "scope": "front_matter"
+    },
+    {
+      "literal": "(FDM)",
+      "field": "manual_abbreviation",
+      "format": "({value})",
+      "scope": "front_matter"
+    },
+    {
+      "literal": "FDM",
+      "field": "manual_abbreviation",
+      "scope": "template"
+    },
+    {
+      "regex": "Edition\\s+\\d+\\s*,\\s*Revision\\s+\\d+\\s+Dated\\s+\\d{1,2}[-/][A-Za-z0-9-]+",
+      "template": "Edition {edition_number}, Revision {revision_number} Dated {effective_date}",
+      "scope": "front_matter"
+    },
+    {
+      "regex": "Edition\\s+\\d+\\s*,\\s*Revision\\s+\\d+",
+      "template": "Edition {edition_number}, Revision {revision_number}",
+      "scope": "template"
+    },
+    {
+      "regex": "E-\\d+\\s+R-\\d+",
+      "template": "E-{edition_number} R-{revision_number}",
+      "scope": "template"
+    },
+    {
+      "literal": "18-04-26",
+      "field": "effective_date",
+      "scope": "template"
+    },
+    {
+      "literal": "17-04-26",
+      "field": "effective_date",
+      "scope": "template"
+    }
+  ],
+  "document_properties": {
+    "title": "manual_name",
+    "subject": "manual_abbreviation",
+    "author": "prepared_by",
+    "company": "Airblue",
+    "keywords": "Airblue, Technical Publications, Controlled Manual, {manual_abbreviation}",
+    "last_modified_by": "Airblue Technical Publications"
+  }
+}

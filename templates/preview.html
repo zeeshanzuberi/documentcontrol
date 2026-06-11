@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>Preview Mapping</h1>
+  {% set counts = preview.report.counts %}
+  <div class="counts">
+    <div class="count"><strong>{{ counts.chapter_heading }}</strong><span>Chapter headings</span></div>
+    <div class="count"><strong>{{ counts.heading_1 + counts.heading_2 + counts.heading_3 + counts.heading_4 + counts.heading_5 + counts.heading_6 }}</strong><span>Headings</span></div>
+    <div class="count"><strong>{{ counts.paragraph_number_level_1 + counts.paragraph_number_level_2 + counts.paragraph_number_level_3 + counts.paragraph_number_level_4 + counts.paragraph_number_level_5 }}</strong><span>Numbered items</span></div>
+    <div class="count"><strong>{{ counts.tables }}</strong><span>Tables</span></div>
+  </div>
+  {% if preview.report.warnings %}
+    <div class="notice">
+      {% for warning in preview.report.warnings[:4] %}
+        <div>{{ warning }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% if preview.report.unmapped_content %}
+    <div class="notice">
+      {% for item in preview.report.unmapped_content[:4] %}
+        <div>{{ item.sample }} — {{ item.reason }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  <h2 style="margin-top:16px;">Generated Section Status</h2>
+  <table>
+    <tbody>
+      {% for key, value in preview.report.generated.items() %}
+      <tr><th>{{ key }}</th><td>{{ value }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="panel" style="margin-top:16px;">
+  <h2>Detected Blocks</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Source Style</th>
+        <th>Detected Role</th>
+        <th>Target Style</th>
+        <th>Confidence</th>
+        <th>Sample</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in preview["items"] %}
+      <tr>
+        <td>{{ item.type }}</td>
+        <td>{{ item.source_style }}</td>
+        <td>{{ item.role }}</td>
+        <td>{{ item.target_style }}</td>
+        <td>{{ item.confidence }}</td>
+        <td>{{ item.sample }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <form action="/convert/{{ job_id }}" method="post" class="actions">
+    <a class="button secondary" href="/">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>
+      Back
+    </a>
+    <button type="submit">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+      Export DOCX
+    </button>
+  </form>
+</section>
+{% endblock %}

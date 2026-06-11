@@ -1,0 +1,47 @@
+{
+  "required_sections": [
+    "Cover Page",
+    "Approval Page",
+    "Record of Revision",
+    "Record of Amendments",
+    "List of Effective Pages",
+    "Table of Contents",
+    "Definitions",
+    "Abbreviations",
+    "Conformance Tables",
+    "Body Chapters",
+    "Appendices"
+  ],
+  "section_breaks": {
+    "Approval Page": true,
+    "Record of Revision": true,
+    "Record of Amendments": true,
+    "List of Effective Pages": true,
+    "Definitions": true,
+    "Abbreviations": true,
+    "Conformance Tables": true,
+    "Chapter": true,
+    "Appendix": true
+  },
+  "page_breaks": {
+    "Approval Page": true,
+    "Record of Revision": true,
+    "Record of Amendments": true,
+    "List of Effective Pages": true,
+    "Definitions": true,
+    "Abbreviations": true,
+    "Conformance Tables": true,
+    "Chapter": true,
+    "Appendix": true,
+    "Intentionally Left Blank": true
+  },
+  "front_matter_headings": {
+    "approval": ["Approval Page"],
+    "lep": ["List of Effective Pages", "LEP"],
+    "ror": ["Record of Revisions", "Record of Revision", "ROR"],
+    "roa": ["Record of Amendments", "Record of Amendment", "ROA"],
+    "definitions": ["Definitions", "Definition", "Terms and Definitions", "Glossary"],
+    "abbreviations": ["Abbreviations", "Acronyms", "List of Abbreviations", "Abbreviation"],
+    "conformance": ["Conformance Table", "Compliance Matrix", "Compliance Table", "Regulatory Compliance", "Cross Reference Table", "PCAA Compliance", "ICAO Compliance", "IOSA Compliance"]
+  }
+}
