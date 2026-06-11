@@ -7,7 +7,7 @@ from typing import Annotated
 
 try:
     from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-    from fastapi.responses import FileResponse, HTMLResponse
+    from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
     from fastapi.templating import Jinja2Templates
 except ImportError as exc:  # pragma: no cover - exercised when dependencies are missing
     raise SystemExit(
@@ -260,6 +260,42 @@ async def convert(request: Request, job_id: str):
         "result.html",
         {"request": request, "job_id": job_id, "report": report, "downloads": downloads},
     )
+
+
+@app.get("/convert/{job_id}", response_class=HTMLResponse)
+async def convert_result(request: Request, job_id: str):
+    output_dir = OUTPUT_DIR / job_id
+    reports = sorted(output_dir.glob("*.json")) if output_dir.exists() else []
+    if reports:
+        report = json.loads(reports[0].read_text(encoding="utf-8"))
+        downloads = []
+        for path_value in report.get("outputs", {}).values():
+            path = Path(path_value)
+            if path.exists():
+                downloads.append({"name": path.name, "url": f"/download/{job_id}/{path.name}"})
+        return templates.TemplateResponse(
+            request,
+            "result.html",
+            {"request": request, "job_id": job_id, "report": report, "downloads": downloads},
+        )
+
+    preview_path = UPLOAD_DIR / job_id / "preview.json"
+    if preview_path.exists():
+        preview_data = json.loads(preview_path.read_text(encoding="utf-8"))
+        job = load_job(job_id)
+        return templates.TemplateResponse(
+            request,
+            "preview.html",
+            {
+                "request": request,
+                "job_id": job_id,
+                "metadata": job.get("metadata", {}),
+                "preview": preview_data,
+                "options": job.get("options", {}),
+            },
+        )
+
+    return RedirectResponse(url="/", status_code=303)
 
 
 @app.get("/download/{job_id}/{filename}")
