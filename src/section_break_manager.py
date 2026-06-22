@@ -24,6 +24,16 @@ NUMBER_WORDS = {
     "eight": "8",
     "nine": "9",
     "ten": "10",
+    "eleven": "11",
+    "twelve": "12",
+    "thirteen": "13",
+    "fourteen": "14",
+    "fifteen": "15",
+    "sixteen": "16",
+    "seventeen": "17",
+    "eighteen": "18",
+    "nineteen": "19",
+    "twenty": "20",
 }
 
 
@@ -63,9 +73,9 @@ class SectionBreakManager:
     def prefix_for(self, text: str, decision: DetectionResult) -> str:
         cleaned = " ".join((text or "").replace("\u2013", "-").split())
         if decision.role == "appendix_heading":
-            match = re.search(r"\b(?:appendix|annex)\s+([A-Z0-9]+)", cleaned, re.I)
+            match = re.search(r"\b(?:appendix|annex|annexe)[-\s]+([A-Z0-9]+)", cleaned, re.I)
             return match.group(1).upper() if match else "A"
-        match = re.search(r"\bchapter\s*[-:]?\s*([0-9]+|[A-Za-z]+)", cleaned, re.I)
+        match = re.search(r"\bchapter\s*[-:\u2013\u2014]?\s*([0-9]+|[A-Za-z]+)", cleaned, re.I)
         if match:
             value = match.group(1).lower()
             return NUMBER_WORDS.get(value, value.upper())

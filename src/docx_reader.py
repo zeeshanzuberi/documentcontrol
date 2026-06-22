@@ -10,6 +10,7 @@ from docx.table import Table, _Cell
 from docx.text.paragraph import Paragraph
 
 from .models import ContentItem
+from .xml_utils import xml_xpath
 
 
 def iter_block_items(parent: DocxDocument | _Cell) -> Iterator[Paragraph | Table]:
@@ -100,7 +101,7 @@ class DocxReader:
         letters = [char for char in text if char.isalpha()]
         all_caps = bool(letters) and sum(1 for char in letters if char.isupper()) / len(letters) > 0.7
 
-        num_pr = paragraph._p.xpath("./w:pPr/w:numPr")
+        num_pr = xml_xpath(paragraph._p, "./w:pPr/w:numPr")
         return {
             "bold": bool(runs and len(bold_runs) / len(runs) >= 0.5),
             "all_caps": all_caps,
@@ -112,7 +113,7 @@ class DocxReader:
 
     def _images_from_paragraph(self, paragraph: Paragraph) -> list[ContentItem]:
         images: list[ContentItem] = []
-        blips = paragraph._p.xpath(".//a:blip")
+        blips = xml_xpath(paragraph._p, ".//a:blip")
         for blip in blips:
             rel_id = blip.get(qn("r:embed")) or blip.get(qn("r:link"))
             if not rel_id:
@@ -142,27 +143,27 @@ class DocxReader:
         for row in table.rows:
             for cell in row.cells:
                 for paragraph in cell.paragraphs:
-                    count += len(paragraph._p.xpath(".//a:blip"))
+                    count += len(xml_xpath(paragraph._p, ".//a:blip"))
         return count
 
     def _has_page_break_before(self, paragraph: Paragraph) -> bool:
-        return bool(paragraph._p.xpath("./w:pPr/w:pageBreakBefore"))
+        return bool(xml_xpath(paragraph._p, "./w:pPr/w:pageBreakBefore"))
 
     def _has_explicit_page_break(self, paragraph: Paragraph) -> bool:
-        return bool(paragraph._p.xpath(".//w:br[@w:type='page']"))
+        return bool(xml_xpath(paragraph._p, ".//w:br[@w:type='page']"))
 
     def _has_merged_cells(self, table: Table) -> bool:
-        return bool(table._tbl.xpath(".//w:gridSpan | .//w:vMerge"))
+        return bool(xml_xpath(table._tbl, ".//w:gridSpan | .//w:vMerge"))
 
     def _grid_column_count(self, table: Table) -> int:
-        grid_cols = table._tbl.xpath("./w:tblGrid/w:gridCol")
+        grid_cols = xml_xpath(table._tbl, "./w:tblGrid/w:gridCol")
         if grid_cols:
             return len(grid_cols)
         return max((len(row.cells) for row in table.rows), default=0)
 
     def _image_extent(self, blip) -> tuple[int | None, int | None]:
-        inline_extents = blip.xpath("ancestor::wp:inline[1]/wp:extent")
-        anchor_extents = blip.xpath("ancestor::wp:anchor[1]/wp:extent")
+        inline_extents = xml_xpath(blip, "ancestor::wp:inline[1]/wp:extent")
+        anchor_extents = xml_xpath(blip, "ancestor::wp:anchor[1]/wp:extent")
         extents = inline_extents or anchor_extents
         if not extents:
             return None, None

@@ -28,7 +28,7 @@ class TemplateEngineTests(unittest.TestCase):
             doc = Document()
             doc.add_paragraph("{{MANUAL_NAME}}")
             anchor = doc.add_paragraph("Template body starts here")
-            add_bookmark(anchor, "Chapter_0")
+            add_bookmark(anchor, "BODY_CONTENT")
             doc.add_paragraph("Old template body")
             doc.save(path)
 
@@ -58,7 +58,30 @@ class TemplateEngineTests(unittest.TestCase):
             mapper = StyleMapper(result, "config/style_map.json", report)
             with self.assertRaises(ValueError):
                 engine.prepare_body_insertion(result, mapper, report)
-            self.assertIn("No body content insertion point found in template.", report.to_dict()["errors"])
+            self.assertIn(
+                "No body content insertion point found in template. Add bookmark BODY_CONTENT or placeholder {{BODY_CONTENT}}.",
+                report.to_dict()["errors"],
+            )
+
+    def test_body_content_override_falls_back_to_chapter_zero_bookmark(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "template.docx"
+            doc = Document()
+            anchor = doc.add_paragraph("Legacy template body starts here")
+            add_bookmark(anchor, "Chapter_0")
+            doc.add_paragraph("Legacy template sample body")
+            doc.save(path)
+
+            engine = TemplateEngine("config/placeholders.json")
+            result = engine.load_copy(path, Path(tmp) / "out.docx")
+            report = ReportBuilder(str(path), "source.docx", {})
+            mapper = StyleMapper(result, "config/style_map.json", report)
+            engine.prepare_body_insertion(result, mapper, report, bookmark_override="BODY_CONTENT")
+
+            texts = [paragraph.text for paragraph in result.paragraphs]
+            self.assertNotIn("Legacy template body starts here", texts)
+            self.assertNotIn("Legacy template sample body", texts)
+            self.assertGreaterEqual(report.to_dict()["counts"]["template_paragraphs_removed"], 2)
 
 
 if __name__ == "__main__":

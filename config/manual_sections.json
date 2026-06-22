@@ -1,16 +1,19 @@
 {
   "required_sections": [
-    "Cover Page",
+    "Approval Letter",
+    "Title Page",
     "Approval Page",
+    "Preface",
+    "Manual Identification Number",
+    "Master Index",
+    "List of Effective Pages",
     "Record of Revision",
     "Record of Amendments",
-    "List of Effective Pages",
-    "Table of Contents",
     "Definitions",
     "Abbreviations",
-    "Conformance Tables",
     "Body Chapters",
-    "Appendices"
+    "Annexes",
+    "Conformance Tables"
   ],
   "section_breaks": {
     "Approval Page": true,
@@ -37,6 +40,7 @@
   },
   "front_matter_headings": {
     "approval": ["Approval Page"],
+    "master_index": ["Master Index", "Table of Contents", "Contents"],
     "lep": ["List of Effective Pages", "LEP"],
     "ror": ["Record of Revisions", "Record of Revision", "ROR"],
     "roa": ["Record of Amendments", "Record of Amendment", "ROA"],

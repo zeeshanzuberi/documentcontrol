@@ -1,0 +1,53 @@
+{
+  "front_matter_styles": {
+    "approval_letter": "Front Matter Heading",
+    "title_page": "Front Matter Heading",
+    "approval_page": "Front Matter Heading",
+    "preface": "Front Matter Heading",
+    "manual_identification_number": "Front Matter Heading",
+    "master_index": "Front Matter Heading",
+    "lep": "Front Matter Heading",
+    "ror": "Front Matter Heading",
+    "roa": "Front Matter Heading",
+    "definitions": "Front Matter Heading",
+    "abbreviations": "Front Matter Heading",
+    "conformance_table": "Front Matter Heading"
+  },
+  "chapter_styles": {
+    "chapter_title": "Chapter Heading",
+    "heading_1": "Heading 1",
+    "heading_2": "Heading 2"
+  },
+  "controlled_paragraph_styles": {
+    "old_heading_3_or_level_3": "List_Paragraph_A",
+    "old_heading_4_or_level_4": "Style A.1",
+    "old_heading_5_or_level_5": "List_Paragraph_i",
+    "old_heading_6_or_level_6": "i_list paragraph",
+    "body": "Body Text",
+    "note": "Note",
+    "caution": "Caution",
+    "warning": "Warning",
+    "bullet": "List Bullet"
+  },
+  "index_inclusion": {
+    "include": [
+      "Front Matter Heading",
+      "Chapter Heading",
+      "Heading 1",
+      "Heading 2",
+      "Annex Heading",
+      "Conformance Heading"
+    ],
+    "exclude": [
+      "List_Paragraph_A",
+      "Style A.1",
+      "List_Paragraph_i",
+      "i_list paragraph",
+      "Body Text",
+      "Normal",
+      "Table Text",
+      "List Bullet",
+      "ILB"
+    ]
+  }
+}

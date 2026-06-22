@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: airblue-manual-converter
+    env: docker
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true

@@ -7,6 +7,7 @@ from docx.table import Table
 from .models import ContentItem
 from .report_generator import ReportBuilder
 from .style_mapper import StyleMapper
+from .xml_utils import xml_xpath
 
 
 class TableHandler:
@@ -74,7 +75,7 @@ class TableHandler:
             report.add_missing_style(style, "table")
 
     def _strip_table_drawings(self, tbl) -> None:
-        for drawing in list(tbl.xpath(".//w:drawing")):
+        for drawing in list(xml_xpath(tbl, ".//w:drawing")):
             parent = drawing.getparent()
             if parent is not None:
                 parent.remove(drawing)

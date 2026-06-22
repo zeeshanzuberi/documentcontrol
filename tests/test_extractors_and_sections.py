@@ -1,9 +1,16 @@
 import unittest
 
+from docx import Document
+from docx.enum.style import WD_STYLE_TYPE
+from docx.oxml import OxmlElement
+
 from src.abbreviations_extractor import AbbreviationsExtractor
 from src.definitions_extractor import DefinitionsExtractor
+from src.front_matter_updater import FrontMatterUpdater
 from src.models import ContentItem, DetectionResult
+from src.report_generator import ReportBuilder
 from src.section_break_manager import SectionBreakManager
+from src.style_mapper import StyleMapper
 
 
 class ExtractorsAndSectionsTests(unittest.TestCase):
@@ -28,7 +35,47 @@ class ExtractorsAndSectionsTests(unittest.TestCase):
         appendix = DetectionResult("appendix_heading", "appendix_heading", 1.0)
         self.assertEqual(manager.prefix_for("Chapter One General", chapter), "1")
         self.assertEqual(manager.prefix_for("CHAPTER 2 OPERATIONS", chapter), "2")
+        self.assertEqual(manager.prefix_for("Chapter – 12: Rules of the Air", chapter), "12")
         self.assertEqual(manager.prefix_for("Appendix A Forms", appendix), "A")
+
+    def test_front_matter_sample_text_on_section_break_paragraph_is_cleared(self):
+        doc = Document()
+        doc.add_paragraph("Definitions")
+        sample = doc.add_paragraph("Template sample definition that must not remain")
+        p_pr = sample._p.get_or_add_pPr()
+        p_pr.append(OxmlElement("w:sectPr"))
+
+        report = ReportBuilder("template.docx", "source.docx", {})
+        mapper = StyleMapper(doc, "config/style_map.json", report)
+        updater = FrontMatterUpdater("config/manual_sections.json", "config/front_matter_rules.json")
+        updater.update(
+            doc,
+            mapper,
+            {},
+            {"definitions": None},
+            {},
+            {
+                "generate_lep": False,
+                "generate_ror": False,
+                "generate_roa": False,
+                "extract_definitions": True,
+                "extract_abbreviations": False,
+                "extract_conformance": False,
+            },
+            report,
+        )
+
+        self.assertNotIn("Template sample definition that must not remain", [p.text for p in doc.paragraphs])
+        self.assertGreater(report.to_dict()["counts"]["template_paragraphs_removed"], 0)
+
+    def test_toc_style_rows_are_not_front_matter_boundaries(self):
+        doc = Document()
+        paragraph = doc.add_paragraph("List of Effective Pages (LEP)")
+        doc.styles.add_style("toc synthetic", WD_STYLE_TYPE.PARAGRAPH)
+        paragraph.style = "toc synthetic"
+
+        updater = FrontMatterUpdater("config/manual_sections.json", "config/front_matter_rules.json")
+        self.assertFalse(updater._is_front_matter_boundary(paragraph))
 
 
 if __name__ == "__main__":

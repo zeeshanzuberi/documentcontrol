@@ -14,6 +14,7 @@ from docx.text.paragraph import Paragraph
 
 from .report_generator import ReportBuilder
 from .style_mapper import StyleMapper
+from .xml_utils import xml_xpath
 
 
 class TemplateEngine:
@@ -33,6 +34,7 @@ class TemplateEngine:
         self._replace_placeholders(document, metadata, report)
         self._replace_bookmarks(document, metadata, report)
         self._replace_front_matter_patterns(document, metadata, report, mapper.content_bookmarks())
+        self.clear_configured_sample_values(document, metadata, report)
         self._update_document_properties(document, metadata)
         if mapper.update_fields_on_open():
             self._set_update_fields_on_open(document)
@@ -44,24 +46,53 @@ class TemplateEngine:
             bookmark_names = [bookmark_override, *[name for name in bookmark_names if name != bookmark_override]]
         anchor = self._find_content_anchor(document, bookmark_names, mapper.content_placeholders())
         if anchor is None:
-            report.add_error("No body content insertion point found in template.")
-            raise ValueError("No body content insertion point found in template.")
+            message = "No body content insertion point found in template. Add bookmark BODY_CONTENT or placeholder {{BODY_CONTENT}}."
+            report.add_error(message)
+            raise ValueError(message)
 
         children = list(body)
         try:
             anchor_index = children.index(anchor)
         except ValueError:
-            report.add_error("No body content insertion point found in template.")
-            raise ValueError("No body content insertion point found in template.")
+            message = "No body content insertion point found in template. Add bookmark BODY_CONTENT or placeholder {{BODY_CONTENT}}."
+            report.add_error(message)
+            raise ValueError(message)
 
         if mapper.replace_existing_body():
             for child in children[anchor_index:]:
                 if child.tag == qn("w:sectPr"):
                     continue
-                body.remove(child)
+                self._remove_or_clear_template_child(body, child, document, report)
         else:
             # Keep the existing body and insert at the end. This avoids disrupting unknown section breaks.
             report.add_warning("Configured to keep existing template body; converted content was appended after existing content.")
+
+    def clear_configured_sample_values(self, document: DocxDocument, metadata: dict[str, str], report: ReportBuilder) -> None:
+        sample_values = [
+            value
+            for value in self.config.get("sample_value_patterns", [])
+            if isinstance(value, str) and value.strip()
+        ]
+        if not sample_values:
+            return
+
+        metadata_values = {value for value in metadata.values() if value}
+        removed: list[str] = []
+        for paragraph in self._iter_all_paragraphs(document):
+            text = paragraph.text or ""
+            if not text:
+                continue
+            new_text = text
+            for sample in sample_values:
+                if sample in metadata_values:
+                    continue
+                if sample in new_text:
+                    new_text = new_text.replace(sample, "")
+                    removed.append(sample)
+            if new_text != text:
+                self._set_paragraph_plain_text(paragraph, " ".join(new_text.split()))
+                report.increment("template_paragraphs_removed")
+        report.record_template_cleanup(removed)
 
     def report_unreplaced_placeholders(self, document: DocxDocument, report: ReportBuilder) -> None:
         pattern = re.compile(r"\{\{[^}]+\}\}")
@@ -92,7 +123,7 @@ class TemplateEngine:
         configured = self.config.get("bookmarks", {})
         found = {bookmark: False for bookmark in configured}
         for paragraph in self._iter_all_paragraphs(document):
-            for start in paragraph._p.xpath(".//w:bookmarkStart"):
+            for start in xml_xpath(paragraph._p, ".//w:bookmarkStart"):
                 name = start.get(qn("w:name"))
                 if name not in configured:
                     continue
@@ -142,7 +173,7 @@ class TemplateEngine:
 
     def _set_update_fields_on_open(self, document: DocxDocument) -> None:
         settings = document.settings._element
-        existing = settings.xpath("./w:updateFields")
+        existing = xml_xpath(settings, "./w:updateFields")
         if existing:
             existing[0].set(qn("w:val"), "true")
             return
@@ -154,7 +185,7 @@ class TemplateEngine:
         body = document.element.body
         bookmark_set = set(bookmark_names)
         for child in body.iterchildren():
-            for start in child.xpath(".//w:bookmarkStart"):
+            for start in xml_xpath(child, ".//w:bookmarkStart"):
                 if start.get(qn("w:name")) in bookmark_set:
                     return child
 
@@ -166,11 +197,48 @@ class TemplateEngine:
                 return child
         return None
 
+    def _remove_or_clear_template_child(self, body, child, document: DocxDocument, report: ReportBuilder) -> None:
+        sample = self._child_sample(child, document)
+        if child.tag == qn("w:p"):
+            if sample:
+                report.increment("template_paragraphs_removed")
+                report.record_template_cleanup([sample])
+            if xml_xpath(child, ".//w:sectPr") or xml_xpath(child, ".//w:bookmarkStart | .//w:bookmarkEnd"):
+                self._clear_paragraph_xml_preserving_structure(child)
+                return
+            body.remove(child)
+            return
+        if child.tag == qn("w:tbl"):
+            if sample:
+                report.record_template_cleanup([sample])
+            report.increment("template_tables_cleared")
+            body.remove(child)
+            return
+        body.remove(child)
+
+    def _child_sample(self, child, document: DocxDocument) -> str:
+        if child.tag == qn("w:p"):
+            text = Paragraph(child, document).text
+            return " ".join((text or "").split())[:160]
+        if child.tag == qn("w:tbl"):
+            parts: list[str] = []
+            for text_node in xml_xpath(child, ".//w:t"):
+                if text_node.text:
+                    parts.append(text_node.text)
+            return " ".join(" ".join(parts).split())[:160]
+        return ""
+
+    def _clear_paragraph_xml_preserving_structure(self, paragraph_element) -> None:
+        for run in list(xml_xpath(paragraph_element, "./w:r")):
+            paragraph_element.remove(run)
+        for hyper in list(xml_xpath(paragraph_element, "./w:hyperlink")):
+            paragraph_element.remove(hyper)
+
     def _paragraphs_before_content_anchor(self, document: DocxDocument, bookmark_names: list[str]) -> list[Paragraph]:
         paragraphs: list[Paragraph] = []
         bookmark_set = set(bookmark_names)
         for paragraph in document.paragraphs:
-            if any(start.get(qn("w:name")) in bookmark_set for start in paragraph._p.xpath(".//w:bookmarkStart")):
+            if any(start.get(qn("w:name")) in bookmark_set for start in xml_xpath(paragraph._p, ".//w:bookmarkStart")):
                 break
             paragraphs.append(paragraph)
         return paragraphs
@@ -232,7 +300,7 @@ class TemplateEngine:
             return False
         for child in children[start_index + 1 : end_index]:
             if child.tag == qn("w:r"):
-                for text_node in child.xpath(".//w:t"):
+                for text_node in xml_xpath(child, ".//w:t"):
                     text_node.text = ""
         run = OxmlElement("w:r")
         text = OxmlElement("w:t")

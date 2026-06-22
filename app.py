@@ -97,12 +97,14 @@ def build_converter() -> DocumentConverter:
         page_numbering_rules_path=CONFIG_DIR / "page_numbering_rules.json",
         front_matter_rules_path=CONFIG_DIR / "front_matter_rules.json",
         generated_tables_path=CONFIG_DIR / "generated_tables.json",
+        audit_rules_path=CONFIG_DIR / "audit_rules.json",
     )
 
 
-async def save_upload(upload: UploadFile, target_dir: Path) -> Path:
+async def save_upload(upload: UploadFile, target_dir: Path, allowed_extensions: set[str] | None = None) -> Path:
     suffix = Path(upload.filename or "").suffix.lower()
-    if suffix not in {".docx", ".pdf"}:
+    allowed = allowed_extensions or {".docx", ".pdf"}
+    if suffix not in allowed:
         raise HTTPException(status_code=400, detail=f"Unsupported file type: {suffix or 'missing extension'}")
     safe_name = f"{Path(upload.filename or 'upload').stem[:80]}{suffix}"
     path = target_dir / safe_name
@@ -158,8 +160,8 @@ async def preview(
     revision_bars: Annotated[str | None, Form()] = None,
     numbering_mode: Annotated[str, Form()] = "word_fields",
 ):
-    if Path(template_file.filename or "").suffix.lower() != ".docx":
-        raise HTTPException(status_code=400, detail="The Airblue template must be a .docx file.")
+    if Path(template_file.filename or "").suffix.lower() not in {".docx", ".dotx"}:
+        raise HTTPException(status_code=400, detail="The Airblue template must be a .docx or .dotx file.")
 
     job_id = uuid.uuid4().hex
     job_upload_dir = UPLOAD_DIR / job_id
@@ -177,8 +179,8 @@ async def preview(
         approved_by,
     )
 
-    template_path = await save_upload(template_file, job_upload_dir)
-    source_path = await save_upload(source_file, job_upload_dir)
+    template_path = await save_upload(template_file, job_upload_dir, {".docx", ".dotx"})
+    source_path = await save_upload(source_file, job_upload_dir, {".docx", ".pdf"})
     options = options_from_form(
         body_insertion_bookmark=body_insertion_bookmark,
         generate_lep=generate_lep,

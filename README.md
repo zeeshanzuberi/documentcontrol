@@ -7,7 +7,8 @@ The uploaded `.docx` template is always the master design source. The old manual
 ## What The Tool Does
 
 - Uses the uploaded Airblue `.docx` template as the base document.
-- Keeps the template front matter, styles, headers, footers, page setup, bookmarks, fields, section breaks, numbering definitions, and controlled document layout.
+- Uses the template only as the design/style/layout source. Template sample chapters, paragraphs, generated-section rows, definitions, abbreviations, conformance entries, and dummy body content are cleared before export.
+- Keeps the template front matter structure, styles, headers, footers, page setup, bookmarks, fields, section breaks, numbering definitions, and controlled document layout.
 - Extracts body content from an old `.docx` or `.pdf`.
 - Removes only old cover/control material where it can do so conservatively.
 - Inserts the extracted body content at the configured content bookmark or placeholder.
@@ -17,6 +18,8 @@ The uploaded `.docx` template is always the master design source. The old manual
 - Applies a best-effort chapter-page header field format such as `1-1`, `2-1`, or `A-1`.
 - Preserves `Intentionally Left Blank` markers as standalone pages.
 - Generates or updates LEP, ROR, ROA, Definitions, Abbreviations, Approval, and Conformance sections where enabled.
+- Regenerates the Master Index from detected old-manual headings and clears target/template index rows so FDM/reference rows cannot remain in OM-A output.
+- Runs a content-source audit for OM-A exports. If configured FDM/template phrases appear in the output without existing in the old approved source manual, conversion fails instead of producing a bad controlled document.
 - Preserves DOCX table XML where possible so rows, columns, and merged cells survive.
 - Preserves body images where possible and warns when images cannot be safely transferred.
 - Generates a final `.docx` plus `.txt` and `.json` conversion reports.
@@ -53,11 +56,53 @@ Open:
 http://127.0.0.1:8000
 ```
 
+## Run As An Online Tool
+
+This project is ready for Docker-based hosting. The web app exposes:
+
+- `/` for the upload and conversion form
+- `/preview` for mapping preview
+- `/convert/{job_id}` for document generation
+- `/download/{job_id}/{filename}` for converted DOCX and reports
+- `/health` for hosting health checks
+
+### Deploy On Render
+
+1. Push this repository to GitHub.
+2. In Render, create a new Blueprint from the repository.
+3. Render will read `render.yaml`, build the Docker image, and start the service.
+4. Open the Render web service URL and upload the old manual plus the new template.
+
+The included `render.yaml` uses Docker and the `/health` endpoint. The container starts with:
+
+```bash
+uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000}
+```
+
+### Deploy On Any Docker Host
+
+Build and run:
+
+```bash
+docker build -t airblue-manual-converter .
+docker run --rm -p 8000:8000 airblue-manual-converter
+```
+
+Then open:
+
+```text
+http://localhost:8000
+```
+
+Uploads and generated outputs are stored in the app container under `uploads/` and `outputs/`. For production use, attach persistent storage or download generated files before restarting the service.
+
 ## Upload The Airblue Template
 
-On the first screen, select the official new-edition Airblue template `.docx`.
+On the first screen, select the official new-edition Airblue template `.docx` or `.dotx`.
 
 The converter copies that file into a temporary job folder and edits only the copy. It does not overwrite the original template.
+
+The template is not a content source. Add a body insertion bookmark named `BODY_CONTENT` or `CONTENT_START`, or add the placeholder `{{BODY_CONTENT}}`. The included Airblue template is also supported with its legacy `Chapter_0` bookmark. If none of those exist, conversion stops with a clear error instead of inserting content at the wrong location.
 
 ## Upload The Old Manual
 
@@ -139,18 +184,22 @@ config/style_map.json
 
 Important keys:
 
-- `target_styles`: Maps detected roles to exact template style names.
-- `table_style`: Template table style for transferred tables.
-- `content_bookmarks`: Bookmark names used as the body insertion point.
-- `content_placeholders`: Placeholder text used as a body insertion point if no bookmark exists.
+- `heading_styles`: Maps detected chapter, appendix, section, and Heading 1-6 roles to exact template style names.
+- `paragraph_styles`: Maps body, note, caution, warning, caption, definition, reference, and table text roles.
+- `paragraph_numbering_styles`: Maps paragraph numbering Level 1-5 to exact template numbering styles.
+- `table_styles`: Template table style for transferred/generated tables.
+- `content_bookmarks`: Bookmark names used as the body insertion point. Default priority is `BODY_CONTENT`, then `CONTENT_START`, then legacy `Chapter_0`.
+- `content_placeholders`: Placeholder text used as a body insertion point if no bookmark exists. Default is `{{BODY_CONTENT}}`.
 - `replace_existing_body_after_bookmark`: Removes the template sample body from the insertion point onward before inserting converted content.
 - `strip_numbering_when_style_has_auto_numbering`: Removes visible source numbering only when the target Word style already has automatic numbering.
 
-For the provided Airblue template, the default insertion bookmark is:
+For the Airblue template, the preferred insertion bookmark is:
 
 ```text
-Chapter_0
+BODY_CONTENT
 ```
+
+If your current template has the existing Airblue bookmark `Chapter_0`, leave the web form blank so the tool auto-detects it.
 
 ## Edit Placeholder Mapping
 
@@ -236,6 +285,8 @@ This file controls heading/list detection:
 
 The detector uses numbering pattern, source Word style, bold formatting, capitalization, line length, and sentence-like context to avoid treating normal list paragraphs as headings.
 
+Low-confidence numbered items are preserved as body text with their visible numbering and recorded in the conversion report instead of being forced into a heading style.
+
 ## PDF Conversion Limits
 
 PDF files do not contain Word styles, Word numbering definitions, bookmarks, fields, or section structure in a form that can be reliably reconstructed.
@@ -282,6 +333,7 @@ config/
   page_numbering_rules.json
   front_matter_rules.json
   generated_tables.json
+  audit_rules.json
   placeholders.json
   style_map.json
 outputs/
@@ -300,6 +352,7 @@ src/
   page_numbering_manager.py
   pdf_reader.py
   report_generator.py
+  master_index_generator.py
   roa_generator.py
   ror_generator.py
   section_break_manager.py

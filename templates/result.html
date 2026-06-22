@@ -6,7 +6,7 @@
     <div class="count"><strong>{{ report.counts.chapter_heading }}</strong><span>Chapter headings</span></div>
     <div class="count"><strong>{{ report.counts.tables }}</strong><span>Tables detected</span></div>
     <div class="count"><strong>{{ report.counts.images }}</strong><span>Images detected</span></div>
-    <div class="count"><strong>{{ report.skipped_front_matter.items }}</strong><span>Skipped items</span></div>
+    <div class="count"><strong>{{ report.skipped_front_matter["items"] }}</strong><span>Skipped items</span></div>
   </div>
   {% if report.warnings %}
     <div class="notice">

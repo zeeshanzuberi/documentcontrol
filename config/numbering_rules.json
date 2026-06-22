@@ -28,17 +28,36 @@
     "page no",
     "para description page no"
   ],
+  "heading_patterns": {
+    "chapter_heading": "^(Chapter|CHAPTER)[-\\s\\u2013\\u2014]*(\\d+|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|[A-Z])\\b",
+    "heading_1": "^\\d+\\s+[^.].+",
+    "heading_2": "^\\d+\\.\\d+\\s+.+",
+    "heading_3": "^\\d+\\.\\d+\\.\\d+\\s+.+",
+    "heading_4": "^\\d+\\.\\d+\\.\\d+\\.\\d+\\s+.+",
+    "heading_5": "^\\d+\\.\\d+\\.\\d+\\.\\d+\\.\\d+\\s+.+",
+    "heading_6": "^\\d+\\.\\d+\\.\\d+\\.\\d+\\.\\d+\\.\\d+\\s+.+",
+    "appendix_heading": "^(Appendix|APPENDIX|Annex|ANNEX|Annexe|ANNEXE)[-\\s]+[A-Z0-9]",
+    "section_heading": "^(Section|SECTION)\\s+(\\d+|[A-Za-z]+)"
+  },
+  "paragraph_numbering_patterns": {
+    "level_1": "^[A-Z]\\.\\s+.+",
+    "level_2": "^\\d+\\.\\s+.+",
+    "level_3": "^[a-z]\\.\\s+.+",
+    "level_4": "^(i|ii|iii|iv|v|vi|vii|viii|ix|x)\\.\\s+.+",
+    "level_5": "^[a-z]\\)\\s+.+"
+  },
+  "classification_rules": {
+    "prefer_source_word_style": true,
+    "prefer_template_style_mapping": true,
+    "do_not_classify_table_text_as_heading": true,
+    "do_not_classify_long_sentence_as_heading": true,
+    "use_bold_as_heading_signal": true,
+    "use_all_caps_as_heading_signal": true,
+    "use_short_line_as_heading_signal": true,
+    "use_following_paragraph_context": true,
+    "preserve_ambiguous_items_as_body_text": true
+  },
   "patterns": {
-    "chapter": "^(chapter|Chapter|CHAPTER)\\s+[0-9A-Za-z]+\\b",
-    "chapter_dash": "^Chapter\\s*[–-]\\s*[0-9A-Za-z]+\\s*:",
-    "appendix": "^(appendix|Appendix|APPENDIX|annex|Annex|ANNEX)\\s+[A-Z0-9]+\\b",
-    "section": "^(section|SECTION)\\s+[0-9A-Za-z]+\\b",
-    "numeric_heading": "^(?P<marker>\\d+(?:\\.\\d+){0,5})\\s+(?P<body>\\S.*)$",
-    "numeric_list": "^(?P<marker>\\d+)[\\.)]\\s+(?P<body>\\S.*)$",
-    "upper_alpha_list": "^(?P<marker>[A-Z])\\.\\s+(?P<body>\\S.*)$",
-    "lower_alpha_list": "^(?P<marker>[a-z])\\.\\s+(?P<body>\\S.*)$",
-    "lower_alpha_paren": "^(?P<marker>[a-z])\\)\\s+(?P<body>\\S.*)$",
-    "roman_list": "^(?P<marker>i{1,3}|iv|v|vi{0,3}|ix|x)\\.\\s+(?P<body>\\S.*)$",
     "bullet": "^([•\\-*])\\s+(?P<body>\\S.*)$",
     "note": "^(note|NOTE)\\s*:",
     "caution": "^(caution|CAUTION)\\s*:",

@@ -7,7 +7,10 @@ from typing import Any
 
 
 DEFAULT_COUNTS = {
+    "template_paragraphs_removed": 0,
+    "template_tables_cleared": 0,
     "body_paragraphs_extracted": 0,
+    "body_paragraphs_inserted": 0,
     "total_headings": 0,
     "chapter_heading": 0,
     "heading_1": 0,
@@ -16,6 +19,10 @@ DEFAULT_COUNTS = {
     "heading_4": 0,
     "heading_5": 0,
     "heading_6": 0,
+    "controlled_level_3": 0,
+    "controlled_level_4": 0,
+    "controlled_level_5": 0,
+    "controlled_level_6": 0,
     "paragraph_number_level_1": 0,
     "paragraph_number_level_2": 0,
     "paragraph_number_level_3": 0,
@@ -48,6 +55,10 @@ class ReportBuilder:
                 "pages": [],
                 "samples": [],
             },
+            "template_cleanup": {
+                "removed_samples": [],
+                "skipped_for_safety": [],
+            },
             "missing_styles": [],
             "missing_placeholders": [],
             "missing_bookmarks": [],
@@ -55,8 +66,12 @@ class ReportBuilder:
             "unmapped_content": [],
             "numbering_conflicts": [],
             "intentionally_blank_pages": [],
+            "content_audit": {
+                "contamination_findings": [],
+            },
             "generated": {
                 "lep": "not_run",
+                "master_index": "not_run",
                 "ror": "not_run",
                 "roa": "not_run",
                 "definitions": "not_run",
@@ -64,6 +79,7 @@ class ReportBuilder:
                 "conformance": "not_run",
                 "approval": "not_run",
                 "page_numbering": "not_run",
+                "content_source_audit": "not_run",
             },
             "quality_control": [],
             "warnings": [],
@@ -109,6 +125,16 @@ class ReportBuilder:
         if item not in self.data["numbering_conflicts"]:
             self.data["numbering_conflicts"].append(item)
 
+    def add_contamination_finding(self, phrase: str, output_count: int, source_count: int, locations: list[str]) -> None:
+        item = {
+            "phrase": phrase,
+            "output_count": output_count,
+            "source_count": source_count,
+            "locations": locations[:10],
+        }
+        if item not in self.data["content_audit"]["contamination_findings"]:
+            self.data["content_audit"]["contamination_findings"].append(item)
+
     def record_skipped(self, samples: list[str], pages: list[int] | None = None) -> None:
         self.data["skipped_front_matter"]["items"] += len(samples)
         self.data["skipped_front_matter"]["samples"].extend(samples[:25])
@@ -116,6 +142,15 @@ class ReportBuilder:
             current = set(self.data["skipped_front_matter"]["pages"])
             current.update(pages)
             self.data["skipped_front_matter"]["pages"] = sorted(current)
+
+    def record_template_cleanup(self, samples: list[str], skipped_for_safety: bool = False) -> None:
+        if not samples:
+            return
+        key = "skipped_for_safety" if skipped_for_safety else "removed_samples"
+        current = self.data["template_cleanup"][key]
+        for sample in samples:
+            if sample and sample not in current:
+                current.append(sample)
 
     def set_output(self, key: str, value: str) -> None:
         self.data["outputs"][key] = value
@@ -148,7 +183,10 @@ class ReportBuilder:
 
         lines.extend(["", "Detected Content Counts"])
         labels = {
+            "template_paragraphs_removed": "Template paragraphs removed or cleared",
+            "template_tables_cleared": "Template tables cleared",
             "body_paragraphs_extracted": "Total body paragraphs extracted",
+            "body_paragraphs_inserted": "Total old manual paragraphs inserted",
             "total_headings": "Total headings detected",
             "chapter_heading": "Chapter headings detected",
             "heading_1": "Heading 1 items detected",
@@ -157,6 +195,10 @@ class ReportBuilder:
             "heading_4": "Heading 4 items detected",
             "heading_5": "Heading 5 items detected",
             "heading_6": "Heading 6 items detected",
+            "controlled_level_3": "Controlled paragraph Level 3 items detected",
+            "controlled_level_4": "Controlled paragraph Level 4 items detected",
+            "controlled_level_5": "Controlled paragraph Level 5 items detected",
+            "controlled_level_6": "Controlled paragraph Level 6 items detected",
             "paragraph_number_level_1": "Paragraph numbering Level 1 items detected",
             "paragraph_number_level_2": "Paragraph numbering Level 2 items detected",
             "paragraph_number_level_3": "Paragraph numbering Level 3 items detected",
@@ -188,6 +230,22 @@ class ReportBuilder:
             lines.append("- Samples skipped:")
             lines.extend(f"  - {sample}" for sample in skipped["samples"][:20])
 
+        cleanup = self.data["template_cleanup"]
+        lines.extend(
+            [
+                "",
+                "Template Cleanup",
+                f"- Template sample/demo items removed: {len(cleanup['removed_samples'])}",
+                f"- Template content skipped for safety: {len(cleanup['skipped_for_safety'])}",
+            ]
+        )
+        if cleanup["removed_samples"]:
+            lines.append("- Removed sample/demo content:")
+            lines.extend(f"  - {sample}" for sample in cleanup["removed_samples"][:30])
+        if cleanup["skipped_for_safety"]:
+            lines.append("- Skipped for safety:")
+            lines.extend(f"  - {sample}" for sample in cleanup["skipped_for_safety"][:30])
+
         lines.extend(["", "Generated Front Matter / Numbering Status"])
         for key, value in self.data["generated"].items():
             lines.append(f"- {key}: {value}")
@@ -199,12 +257,15 @@ class ReportBuilder:
             ("Unreplaced Placeholders", "unreplaced_placeholders"),
             ("Unmapped or Low-Confidence Content", "unmapped_content"),
             ("Numbering Conflicts", "numbering_conflicts"),
+            ("Content Contamination Findings", "content_audit"),
             ("Warnings", "warnings"),
             ("Errors", "errors"),
         ]
         for title, key in sections:
             lines.extend(["", title])
             values = self.data[key]
+            if key == "content_audit":
+                values = values.get("contamination_findings", [])
             if not values:
                 lines.append("- None")
                 continue

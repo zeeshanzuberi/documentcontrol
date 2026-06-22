@@ -6,18 +6,23 @@ from pathlib import Path
 from typing import Any
 
 from docx import Document
+from docx.enum.section import WD_SECTION
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 from .abbreviations_extractor import AbbreviationsExtractor
 from .blank_page_handler import BlankPageHandler
+from .body_content_filter import BodyContentFilter
 from .conformance_table_extractor import ConformanceTableExtractor
 from .content_cleaner import ContentCleaner
 from .definitions_extractor import DefinitionsExtractor
 from .docx_reader import DocxReader
+from .docx_sanitizer import DocxSanitizer
 from .front_matter_updater import FrontMatterUpdater
+from .hierarchy_builder import HierarchyBuilder
 from .image_handler import ImageHandler
 from .lep_generator import LEPGenerator
+from .master_index_generator import MasterIndexGenerator
 from .models import ContentItem, DetectionResult
 from .numbering_detector import NumberingDetector
 from .page_numbering_manager import PageNumberingManager
@@ -26,9 +31,12 @@ from .report_generator import ReportBuilder
 from .roa_generator import ROAGenerator
 from .ror_generator import RORGenerator
 from .section_break_manager import SectionBreakManager
+from .section_rebuilder import RebuildSection, SectionRebuilder
 from .style_mapper import StyleMapper
 from .table_handler import TableHandler
 from .template_engine import TemplateEngine
+from .validation_report import ContentSourceValidator
+from .zone_classifier import ZoneClassifier, ZoneResult
 
 
 SUPPORTED_SOURCE_EXTENSIONS = {".docx", ".pdf"}
@@ -46,6 +54,7 @@ class DocumentConverter:
         page_numbering_rules_path: str | Path = "config/page_numbering_rules.json",
         front_matter_rules_path: str | Path = "config/front_matter_rules.json",
         generated_tables_path: str | Path = "config/generated_tables.json",
+        audit_rules_path: str | Path = "config/audit_rules.json",
     ):
         self.style_map_path = Path(style_map_path)
         self.placeholder_path = Path(placeholder_path)
@@ -54,18 +63,26 @@ class DocumentConverter:
         self.page_numbering_rules_path = Path(page_numbering_rules_path)
         self.front_matter_rules_path = Path(front_matter_rules_path)
         self.generated_tables_path = Path(generated_tables_path)
+        self.audit_rules_path = Path(audit_rules_path)
         self.detector = NumberingDetector(self.numbering_rules_path)
         self.cleaner = ContentCleaner(self.detector)
+        self.zone_classifier = ZoneClassifier()
+        self.body_content_filter = BodyContentFilter()
+        self.hierarchy_builder = HierarchyBuilder()
         self.template_engine = TemplateEngine(self.placeholder_path)
         self.front_matter_updater = FrontMatterUpdater(self.manual_sections_path, self.front_matter_rules_path)
         self.section_break_manager = SectionBreakManager(self.manual_sections_path)
+        self.section_rebuilder = SectionRebuilder(self.section_break_manager)
         self.page_numbering_manager = PageNumberingManager(self.page_numbering_rules_path)
+        self.docx_sanitizer = DocxSanitizer()
         self.table_handler = TableHandler()
         self.image_handler = ImageHandler()
         self.blank_page_handler = BlankPageHandler()
         self.lep_generator = LEPGenerator(self.generated_tables_path)
+        self.master_index_generator = MasterIndexGenerator(self.generated_tables_path)
         self.ror_generator = RORGenerator(self.generated_tables_path)
         self.roa_generator = ROAGenerator(self.generated_tables_path)
+        self.content_source_validator = ContentSourceValidator(self.audit_rules_path)
 
     def preview(self, template_path: str | Path, source_path: str | Path, metadata: dict[str, str], options: dict[str, Any] | None = None) -> dict[str, Any]:
         options = self._options(options)
@@ -73,10 +90,12 @@ class DocumentConverter:
         document = Document(str(template_path))
         mapper = StyleMapper(document, self.style_map_path, report)
         full_items = self._read_source(source_path, report)
-        extracted_sections = self._extract_special_sections(full_items, options, report)
-        items = self._clean_and_filter_source(full_items, extracted_sections, options, report)
+        zone_result = self.zone_classifier.classify(full_items, report)
+        extracted_sections = self._extract_special_sections_from_zones(zone_result, options, report)
+        items = self._body_items_from_zones(zone_result, report)
         decisions = self._analyze_items(items, mapper, report)
         generated_tables = self._generate_front_matter_tables(decisions, metadata, options, report)
+        self.hierarchy_builder.build(decisions, options.get("extract_conformance", True), report)
         return {
             "report": report.to_dict(),
             "generated_tables": {key: len(value) for key, value in generated_tables.items()},
@@ -121,16 +140,21 @@ class DocumentConverter:
         self.template_engine.apply_metadata(document, metadata, report, mapper)
 
         full_items = self._read_source(source_path, report)
-        extracted_sections = self._extract_special_sections(full_items, options, report)
-        items = self._clean_and_filter_source(full_items, extracted_sections, options, report)
+        zone_result = self.zone_classifier.classify(full_items, report)
+        extracted_sections = self._extract_special_sections_from_zones(zone_result, options, report)
+        items = self._body_items_from_zones(zone_result, report)
         decisions = self._analyze_items(items, mapper, report)
         generated_tables = self._generate_front_matter_tables(decisions, metadata, options, report)
+        self.hierarchy_builder.build(decisions, options.get("extract_conformance", True), report)
         source_text_hash = self._hash_items(items)
 
         self.template_engine.prepare_body_insertion(document, mapper, report, options.get("body_insertion_bookmark", ""))
         self.front_matter_updater.update(document, mapper, metadata, extracted_sections, generated_tables, options, report)
-        sections_info = self._insert_items(document, decisions, mapper, report, bool(options.get("revision_bars")), options)
+        rebuild_sections = self.section_rebuilder.build(decisions, report)
+        sections_info = self._insert_rebuild_sections(document, rebuild_sections, mapper, report, bool(options.get("revision_bars")), options)
+        self._append_conformance_section(document, extracted_sections.get("conformance_tables"), mapper, report, options)
         self.template_engine.report_unreplaced_placeholders(document, report)
+        self.content_source_validator.validate(document, full_items, metadata, report)
         self._quality_control(document, decisions, metadata, report)
 
         document.save(str(output_docx))
@@ -141,6 +165,7 @@ class DocumentConverter:
             options.get("numbering_mode", "word_fields"),
             report,
         )
+        self.docx_sanitizer.sanitize(output_docx, report)
         report.set_output("docx", str(output_docx))
         report.data["source_body_text_sha256"] = source_text_hash
 
@@ -201,6 +226,38 @@ class DocumentConverter:
         report.increment("body_paragraphs_extracted", sum(1 for item in cleaned if item.type == "paragraph"))
         return cleaned
 
+    def _body_items_from_zones(self, zone_result: ZoneResult, report: ReportBuilder) -> list[ContentItem]:
+        body_items = self.body_content_filter.filter(zone_result.body_items(), report)
+        report.increment("body_paragraphs_extracted", sum(1 for item in body_items if item.type == "paragraph"))
+        return body_items
+
+    def _extract_special_sections_from_zones(
+        self,
+        zone_result: ZoneResult,
+        options: dict[str, Any],
+        report: ReportBuilder,
+    ) -> dict[str, Any]:
+        sections: dict[str, Any] = {}
+        if options.get("extract_definitions", True):
+            definition_items = zone_result.zone_items("old_definitions")
+            sections["definitions"] = DefinitionsExtractor().extract(definition_items)
+            if sections["definitions"].warning:
+                report.add_warning(sections["definitions"].warning)
+            report.data["generated"]["definitions"] = "source_detected" if sections["definitions"].found else "missing_source_data"
+        if options.get("extract_abbreviations", True):
+            abbreviation_items = zone_result.zone_items("old_abbreviations")
+            sections["abbreviations"] = AbbreviationsExtractor().extract(abbreviation_items)
+            if sections["abbreviations"].warning:
+                report.add_warning(sections["abbreviations"].warning)
+            report.data["generated"]["abbreviations"] = "source_detected" if sections["abbreviations"].found else "missing_source_data"
+        if options.get("extract_conformance", True):
+            conformance_items = zone_result.zone_items("conformance_tables")
+            sections["conformance_tables"] = ConformanceTableExtractor().extract(conformance_items)
+            if sections["conformance_tables"].warning:
+                report.add_warning(sections["conformance_tables"].warning)
+            report.data["generated"]["conformance"] = "source_detected" if sections["conformance_tables"].found else "missing_source_data"
+        return sections
+
     def _extract_special_sections(self, items: list[ContentItem], options: dict[str, Any], report: ReportBuilder) -> dict[str, Any]:
         sections: dict[str, Any] = {}
         if options.get("extract_definitions", True):
@@ -220,6 +277,40 @@ class DocumentConverter:
             report.data["generated"]["conformance"] = "source_detected" if sections["conformance_tables"].found else "missing_source_data"
         return sections
 
+    def _append_conformance_section(
+        self,
+        document,
+        extracted: Any,
+        mapper: StyleMapper,
+        report: ReportBuilder,
+        options: dict[str, Any],
+    ) -> None:
+        if not options.get("extract_conformance", True):
+            return
+        document.add_section(WD_SECTION.NEW_PAGE)
+        report.increment("section_breaks_inserted")
+        heading = document.add_paragraph("Conformance Table")
+        try:
+            heading.style = mapper.style_for("section_heading")
+        except Exception:
+            report.add_missing_style(mapper.style_for("section_heading"), "conformance")
+
+        if not extracted or not getattr(extracted, "found", False):
+            report.add_warning("Conformance Table section was placed at the end, but no source conformance table was detected.")
+            report.data["generated"]["conformance"] = "missing_source_data"
+            return
+
+        for item in extracted.items:
+            if item.type == "paragraph" and item.text.strip():
+                paragraph = document.add_paragraph(item.text)
+                try:
+                    paragraph.style = mapper.style_for("body")
+                except Exception:
+                    report.add_missing_style(mapper.style_for("body"), "conformance")
+            elif item.type == "table" and item.rows:
+                self.table_handler.insert_table(document, item, mapper, report)
+        report.data["generated"]["conformance"] = "placed_at_end_from_source"
+
     def _generate_front_matter_tables(
         self,
         decisions: list[tuple[ContentItem, DetectionResult]],
@@ -228,6 +319,7 @@ class DocumentConverter:
         report: ReportBuilder,
     ) -> dict[str, list[list[str]]]:
         tables: dict[str, list[list[str]]] = {}
+        tables["master_index"] = self.master_index_generator.generate(decisions, metadata, report)
         if options.get("generate_lep", True):
             tables["lep"] = self.lep_generator.generate(decisions, metadata, report)
         if options.get("generate_ror", True):
@@ -308,6 +400,60 @@ class DocumentConverter:
                     report.add_warning("A body image was detected but image extraction/insertion is disabled.")
         return sections_info
 
+    def _insert_rebuild_sections(
+        self,
+        document,
+        sections: list[RebuildSection],
+        mapper: StyleMapper,
+        report: ReportBuilder,
+        revision_bars: bool,
+        options: dict[str, Any],
+    ) -> list[dict[str, str]]:
+        sections_info: list[dict[str, str]] = []
+        for section in sections:
+            if section.role in {"chapter_heading", "appendix_heading"}:
+                heading_item, heading_decision = section.decisions[0]
+                sections_info.append(
+                    self.section_break_manager.start_manual_section(
+                        document,
+                        heading_item.text,
+                        heading_decision,
+                        report,
+                    )
+                )
+            for item, decision in section.decisions:
+                self._insert_decision(document, item, decision, mapper, report, revision_bars, options)
+        return sections_info
+
+    def _insert_decision(
+        self,
+        document,
+        item: ContentItem,
+        decision: DetectionResult,
+        mapper: StyleMapper,
+        report: ReportBuilder,
+        revision_bars: bool,
+        options: dict[str, Any],
+    ) -> None:
+        if item.type == "page_break":
+            document.add_page_break()
+            report.increment("page_breaks_inserted")
+        elif item.type == "paragraph":
+            if self.blank_page_handler.is_blank_marker(item) and options.get("preserve_blank_pages", True):
+                self.blank_page_handler.insert_blank_page(document, item, mapper, report)
+                return
+            self._insert_paragraph(document, item, decision, mapper, report, revision_bars)
+        elif item.type == "table":
+            if options.get("extract_tables", True):
+                self.table_handler.insert_table(document, item, mapper, report)
+            else:
+                report.add_warning("A body table was detected but table extraction/insertion is disabled.")
+        elif item.type == "image":
+            if options.get("extract_images", True):
+                self.image_handler.insert_image(document, item, report)
+            else:
+                report.add_warning("A body image was detected but image extraction/insertion is disabled.")
+
     def _insert_paragraph(
         self,
         document,
@@ -332,6 +478,7 @@ class DocumentConverter:
         except Exception:
             report.add_missing_style(style_name, decision.role)
         self._set_paragraph_text(paragraph, text)
+        report.increment("body_paragraphs_inserted")
         if revision_bars:
             self._add_revision_bar(paragraph, mapper.revision_bar_config())
 
@@ -399,17 +546,25 @@ class DocumentConverter:
             "DOCX source headers/footers are not read; PDF header/footer text may still require manual review.",
         )
         report.add_quality_check("No unreplaced placeholders remain", "PASS" if not report.data["unreplaced_placeholders"] else "WARN", ", ".join(report.data["unreplaced_placeholders"]))
-        report.add_quality_check("Body content exists after front matter", "PASS" if decisions else "FAIL", f"{len(decisions)} body blocks prepared")
+        inserted = report.data["counts"].get("body_paragraphs_inserted", 0)
+        report.add_quality_check("Body content exists after front matter", "PASS" if inserted else "FAIL", f"{inserted} old manual paragraphs inserted")
+        report.add_quality_check(
+            "Template sample body content removed",
+            "PASS" if report.data["counts"].get("template_paragraphs_removed", 0) or report.data["counts"].get("template_tables_cleared", 0) else "WARN",
+            f"{report.data['counts'].get('template_paragraphs_removed', 0)} paragraphs / {report.data['counts'].get('template_tables_cleared', 0)} tables cleared",
+        )
         report.add_quality_check("Chapter sections start on new pages", "PASS" if report.data["counts"]["section_breaks_inserted"] >= report.data["counts"]["chapters_detected"] else "WARN")
         report.add_quality_check("Page numbering restarts at each chapter", "PASS" if report.data["counts"]["chapters_detected"] == 0 or report.data["counts"]["section_breaks_inserted"] >= report.data["counts"]["chapters_detected"] else "WARN")
         report.add_quality_check("Intentionally Left Blank pages are standalone", "PASS" if report.data["counts"]["intentionally_blank_pages"] >= 0 else "WARN")
         for key, label in [
+            ("master_index", "Master Index generated or warning generated"),
             ("lep", "LEP exists or warning generated"),
             ("ror", "ROR exists or warning generated"),
             ("roa", "ROA exists or warning generated"),
             ("definitions", "Definitions section exists or warning generated"),
             ("abbreviations", "Abbreviations section exists or warning generated"),
             ("conformance", "Conformance tables exist or warning generated"),
+            ("content_source_audit", "FDM/template contamination check"),
         ]:
             status = report.data["generated"].get(key, "not_run")
             report.add_quality_check(label, "PASS" if status not in {"not_run"} else "WARN", status)

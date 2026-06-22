@@ -1,0 +1,18 @@
+{
+  "no_fdm_in_oma": true,
+  "fdm_contamination_phrases": [
+    "FDM",
+    "Flight Dispatch Manual",
+    "Administration and Control of FDM",
+    "Submission of FDM",
+    "Terminal Operations",
+    "Departure Functions",
+    "Arrival Functions",
+    "Baggage Services",
+    "Flight Coordinator Proforma"
+  ],
+  "strict_count_phrases": [
+    "FDM",
+    "Flight Dispatch Manual"
+  ]
+}

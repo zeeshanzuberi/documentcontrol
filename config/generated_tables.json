@@ -1,4 +1,9 @@
 {
+  "master_index": {
+    "enabled": true,
+    "source": "detected_source_headings",
+    "columns": ["Section", "Description", "Page"]
+  },
   "lep": {
     "enabled": true,
     "source": "final_document_structure",

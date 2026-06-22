@@ -5,7 +5,8 @@ import re
 import shutil
 import zipfile
 from pathlib import Path
-from xml.etree import ElementTree as ET
+
+from lxml import etree as ET
 
 from .report_generator import ReportBuilder
 

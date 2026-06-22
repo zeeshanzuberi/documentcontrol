@@ -69,6 +69,20 @@
       "scope": "template"
     }
   ],
+  "sample_value_patterns": [
+    "Edition 07",
+    "18-04-2026",
+    "18-04-26",
+    "17-04-26",
+    "Mr. Waseem Javed",
+    "Ms. Marium Arif",
+    "Sample Manual",
+    "Template Manual",
+    "Example Manual",
+    "Sample Definition",
+    "Sample Abbreviation",
+    "Sample Conformance"
+  ],
   "document_properties": {
     "title": "manual_name",
     "subject": "manual_abbreviation",

@@ -5,8 +5,8 @@
     <section class="panel">
       <h1>Manual Conversion</h1>
       <div class="field">
-        <label for="template_file">Official Airblue template (.docx)</label>
-        <input id="template_file" name="template_file" type="file" accept=".docx" required>
+        <label for="template_file">Official Airblue template (.docx or .dotx)</label>
+        <input id="template_file" name="template_file" type="file" accept=".docx,.dotx" required>
       </div>
       <div class="field">
         <label for="source_file">Old manual (.docx or .pdf)</label>
@@ -14,13 +14,11 @@
       </div>
       <div class="field">
         <label for="body_insertion_bookmark">Body insertion bookmark</label>
-        <input id="body_insertion_bookmark" name="body_insertion_bookmark" type="text" value="Chapter_0" list="bookmark_options" autocomplete="off">
+        <input id="body_insertion_bookmark" name="body_insertion_bookmark" type="text" value="" placeholder="Auto-detect" list="bookmark_options" autocomplete="off">
         <datalist id="bookmark_options">
           <option value="BODY_CONTENT"></option>
           <option value="CONTENT_START"></option>
           <option value="Chapter_0"></option>
-          <option value="MAIN_CONTENT"></option>
-          <option value="ManualBody"></option>
         </datalist>
       </div>
       <div class="field">
